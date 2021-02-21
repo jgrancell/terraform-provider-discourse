@@ -4,8 +4,12 @@ type GroupRequest struct {
   Group []*Group `json:"group,omitempty"`
 }
 
-type GroupResponse struct {
+type GroupCreateResponse struct {
   Group *Group `json:"basic_group,omitempty"`
+}
+
+type GroupReadResponse struct {
+  Group *Group `json:"group,omitempty"`
 }
 
 type Group struct {

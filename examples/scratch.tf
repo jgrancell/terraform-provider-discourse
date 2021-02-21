@@ -24,6 +24,7 @@ locals {
 
 resource "discourse_group" "approved_members" {
   name = "SecondGroup"
+  title = "Group for second example members"
 }
 
 resource "discourse_setting" "settings" {

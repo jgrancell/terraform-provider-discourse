@@ -180,13 +180,42 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
     return diags
   }
 
-  var group GroupResponse
+  var group GroupCreateResponse
 	j := json.Unmarshal([]byte(body), &group)
 	if j != nil {
 		return diag.FromErr(j)
 	}
 
   d.Set("name", group.Group.Name)
+  // Terraform requires strings for Ids, so we have to convert the integer Discourse gives us
+	d.SetId(strconv.Itoa(group.Group.Id))
+  return resourceGroupRead(ctx, d, m)
+}
+
+func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+  var diags diag.Diagnostics
+  conf := m.(Config)
+
+  name := d.Get("name").(string)
+
+  request := &ApiRequest{
+    Method: "GET",
+    Endpoint: "/groups/"+name+".json",
+    Config: conf,
+  }
+
+  body, reqErr, ok := request.Call()
+  if ! ok {
+    diags = append(diags, reqErr)
+    return diags
+  }
+
+  var group GroupReadResponse
+  j := json.Unmarshal([]byte(body), &group)
+  if j != nil {
+    return diag.FromErr(j)
+  }
+
   d.Set("mentionable_level", group.Group.MentionableLevel)
   d.Set("messageable_level", group.Group.MessageableLevel)
   d.Set("visibility_level", group.Group.VisibilityLevel)
@@ -202,20 +231,93 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
   d.Set("full_name", group.Group.FullName)
   d.Set("default_notification_level", group.Group.DefaultNotificationLevel)
   d.Set("members_visibility_level", group.Group.MembersVisibilityLevel)
-  // Terraform requires strings for Ids, so we have to convert the integer Discourse gives us
-  log("ID is "+strconv.Itoa(group.Group.Id))
-	d.SetId(strconv.Itoa(group.Group.Id))
-  return diags
-}
-
-func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-  // Warning or errors can be collected in a slice type
-  var diags diag.Diagnostics
-
   return diags
 }
 
 func resourceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+  // Warning or errors can be collected in a slice type
+  var diags diag.Diagnostics
+  conf := m.(Config)
+
+  // Building our request structs
+  newGroup := &Group {
+    Name: d.Get("name").(string),
+  }
+
+  if d.HasChange("mentionable_level") {
+    newGroup.MentionableLevel = d.Get("mentionable_level").(int)
+  }
+  if d.HasChange("messageable_level") {
+    newGroup.MessageableLevel = d.Get("messageable_level").(int)
+  }
+  if d.HasChange("visibility_level") {
+    newGroup.VisibilityLevel = d.Get("visibility_level").(int)
+  }
+  if d.HasChange("primary_group") {
+    newGroup.PrimaryGroup = d.Get("primary_group").(bool)
+  }
+  if d.HasChange("title") {
+    newGroup.Title = d.Get("title").(string)
+  }
+  if d.HasChange("grant_trust_level") {
+    newGroup.GrantTrustLevel = d.Get("grant_trust_level").(int)
+  }
+  if d.HasChange("flair_url") {
+    newGroup.FlairUrl = d.Get("flair_url").(string)
+  }
+  if d.HasChange("flair_bg_color") {
+    newGroup.FlairBackgroundColor = d.Get("flair_bg_color").(string)
+  }
+  if d.HasChange("flair_color") {
+    newGroup.FlairColor = d.Get("flair_color").(string)
+  }
+  if d.HasChange("public_admission") {
+    newGroup.PublicAdmission = d.Get("public_admission").(bool)
+  }
+  if d.HasChange("public_exit") {
+    newGroup.PublicExit = d.Get("public_exit").(bool)
+  }
+  if d.HasChange("allow_membership_requests") {
+    newGroup.AllowMembershipRequests = d.Get("allow_membership_requests").(bool)
+  }
+  if d.HasChange("full_name") {
+    newGroup.FullName = d.Get("full_name").(string)
+  }
+  if d.HasChange("default_notification_level") {
+    newGroup.DefaultNotificationLevel = d.Get("default_notification_level").(int)
+  }
+  if d.HasChange("members_visibility_level") {
+    newGroup.MembersVisibilityLevel = d.Get("members_visibility_level").(int)
+  }
+
+  groupMap := make(map[string]*Group)
+  groupMap["group"] = newGroup
+
+  // Turning resource struct into jsonBody
+  groupJson, err := json.Marshal(groupMap)
+  if err != nil {
+    return diag.FromErr(err)
+  }
+  log(string(groupJson))
+
+  request := &ApiRequest{
+    Method: "PUT",
+    Endpoint: "/groups/"+d.Id()+".json",
+    JsonBody: string(groupJson),
+    Config: conf,
+  }
+
+  body, reqErr, ok := request.Call()
+  if ! ok {
+    diags = append(diags, reqErr)
+    return diags
+  }
+
+  var group GroupCreateResponse
+	j := json.Unmarshal([]byte(body), &group)
+	if j != nil {
+		return diag.FromErr(j)
+	}
   return resourceGroupRead(ctx, d, m)
 }
 

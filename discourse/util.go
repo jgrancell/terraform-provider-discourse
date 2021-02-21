@@ -90,10 +90,16 @@ func (req *ApiRequest) Call() (string, diag.Diagnostic, bool) {
     }
     return "", diag, false
   } else {
+    var errMsg string
+    if len(de.Message)  >= 1 {
+      errMsg = de.Message[0]
+    } else {
+      errMsg = string(bodyBytes)
+    }
     diag := diag.Diagnostic{
       Severity: diag.Error,
       Summary: "Received a Discourse API error response.",
-      Detail: "Request endpoint: "+req.Endpoint+"; Error type: "+de.ErrorType+"; Error message: "+de.Message[0],
+      Detail: "Request endpoint: "+req.Endpoint+"; Error type: "+de.ErrorType+"; Error message: "+errMsg,
     }
     return "", diag, false
   }
